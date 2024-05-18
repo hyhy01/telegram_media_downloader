@@ -3,7 +3,7 @@ import asyncio
 import logging
 import os
 from typing import List, Optional, Tuple, Union
-
+import time
 import pyrogram
 import yaml
 from pyrogram.types import Audio, Document, Photo, Video, VideoNote, Voice
@@ -27,6 +27,7 @@ logger = logging.getLogger("media_downloader")
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 FAILED_IDS: list = []
 DOWNLOADED_IDS: list = []
+IDS_TO_SKIP: set = set([])
 
 
 def update_config(config: dict):
@@ -39,7 +40,10 @@ def update_config(config: dict):
         Configuration to be written into config file.
     """
     config["ids_to_retry"] = (
-        list(set(config["ids_to_retry"]) - set(DOWNLOADED_IDS)) + FAILED_IDS
+        list((set(config["ids_to_retry"]) - set(DOWNLOADED_IDS)) |  set(FAILED_IDS))
+    )
+    config["ids_to_skip"] = (
+        list(IDS_TO_SKIP | set(DOWNLOADED_IDS))
     )
     with open("config.yaml", "w") as yaml_file:
         yaml.dump(config, yaml_file, default_flow_style=False)
@@ -170,6 +174,13 @@ async def download_media(
     int
         Current message id.
     """
+    if message.id in IDS_TO_SKIP:
+    	DOWNLOADED_IDS.append(message.id)
+    	return message.id
+    #print("sleep10")
+    #time.sleep(10)
+    await asyncio.sleep(10)
+    #print("sleep10 end")
     for retry in range(3):
         try:
             if message.media is None:
@@ -182,18 +193,28 @@ async def download_media(
                 if _can_download(_type, file_formats, file_format):
                     if _is_exist(file_name):
                         file_name = get_next_name(file_name)
+                        #print("sleep3_2")
+                        #await asyncio.sleep(3)
+                        #print("sleep3_2 end")
                         download_path = await client.download_media(
                             message, file_name=file_name
                         )
                         # pylint: disable = C0301
                         download_path = manage_duplicate_file(download_path)  # type: ignore
                     else:
+                        #print("sleep3_3")
+                        #await asyncio.sleep(3)
                         download_path = await client.download_media(
                             message, file_name=file_name
                         )
-                    if download_path:
-                        logger.info("Media downloaded - %s", download_path)
-                    DOWNLOADED_IDS.append(message.id)
+                    print("id:",message.id, download_path)
+                    if os.path.getsize(download_path) > 0:
+                        DOWNLOADED_IDS.append(message.id)
+                        IDS_TO_SKIP.add(message.id)
+                        if download_path:
+                            logger.info("Media downloaded - %s", download_path)
+                    else:
+                    	raise Exception("size zero!", download_path,message.id)
             break
         except pyrogram.errors.exceptions.bad_request_400.BadRequest:
             logger.warning(
@@ -271,12 +292,16 @@ async def process_messages(
     int
         Max value of list of message ids.
     """
-    message_ids = await asyncio.gather(
-        *[
-            download_media(client, message, media_types, file_formats)
+    message_ids = [
+            await download_media(client, message, media_types, file_formats)
             for message in messages
         ]
-    )
+    #message_ids = await asyncio.gather(
+    #    *[
+    #        download_media(client, message, media_types, file_formats)
+    #        for message in messages
+    #    ]
+    #)
 
     last_message_id: int = max(message_ids)
     return last_message_id
@@ -323,8 +348,11 @@ async def begin_import(config: dict, pagination_limit: int) -> dict:
         for message in skipped_messages:
             pagination_count += 1
             messages_list.append(message)
-
-    async for message in messages_iter:  # type: ignore
+    if config["ids_to_skip"]:
+    	IDS_TO_SKIP.update(config["ids_to_skip"])
+    	#print(IDS_TO_SKIP)
+    #async for message in messages_iter:  # type: ignore
+    async for message in messages_iter: 
         if pagination_count != pagination_limit:
             pagination_count += 1
             messages_list.append(message)
@@ -358,7 +386,7 @@ def main():
     with open(os.path.join(THIS_DIR, "config.yaml")) as f:
         config = yaml.safe_load(f)
     updated_config = asyncio.get_event_loop().run_until_complete(
-        begin_import(config, pagination_limit=100)
+        begin_import(config, pagination_limit=3)
     )
     if FAILED_IDS:
         logger.info(

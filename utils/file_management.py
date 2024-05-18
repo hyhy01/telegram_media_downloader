@@ -69,10 +69,23 @@ def manage_duplicate_file(file_path: str):
     )
     if file_path in old_files:
         old_files.remove(file_path)
-    current_file_md5: str = md5(open(file_path, "rb").read()).hexdigest()
+    #fixed: OOM
+    current_file_md5: str = get_file_md5(file_path)
     for old_file_path in old_files:
-        old_file_md5: str = md5(open(old_file_path, "rb").read()).hexdigest()
+        old_file_md5: str = get_file_md5(old_file_path)
         if current_file_md5 == old_file_md5:
             os.remove(file_path)
             return old_file_path
     return file_path
+
+
+def get_file_md5(fname):
+    m = md5()   #创建md5对象
+    with open(fname,'rb') as fobj:
+        while True:
+            data = fobj.read(4096)
+            if not data:
+                break
+            m.update(data)  #更新md5对象
+
+    return m.hexdigest()    #返回md5对象

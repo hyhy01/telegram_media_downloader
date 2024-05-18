@@ -17,7 +17,7 @@
   <span> & </span>
   <a href="https://t.me/tgmdnews">Telegram Community</a>
 </h3>
-
+修改了 计算md5时内存溢出、通过降低下载速度解决420 FLOOD_WAIT_X、大小为0的文件不算下载成功
 ### Overview:
 Download all media files from a conversation or a channel that you are a part of from telegram.
 A meta of last read/downloaded message is stored in the config file so that in such a way it won't download the same media file again.

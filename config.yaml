@@ -3,6 +3,7 @@ api_id: your_api_id
 chat_id: telegram_chat_id
 last_read_message_id: 0
 ids_to_retry: []
+ids_to_skip: []
 media_types:
 - audio
 - photo
