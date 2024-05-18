@@ -35,7 +35,7 @@ A meta of last read/downloaded message is stored in the config file so that in s
 
 For *nix os distributions with `make` availability
 ```sh
-$ git clone https://github.com/Dineshkarthik/telegram_media_downloader.git
+$ git clone https://github.com/hyhy01/telegram_media_downloader.git
 $ cd telegram_media_downloader
 $ make install
 ```
@@ -83,6 +83,7 @@ api_id: your_api_id
 chat_id: telegram_chat_id
 last_read_message_id: 0
 ids_to_retry: []
+ids_to_skip: []
 media_types:
 - audio
 - document
