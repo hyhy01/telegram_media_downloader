@@ -191,19 +191,21 @@ async def download_media(
                     continue
                 file_name, file_format = await _get_media_meta(_media, _type)
                 if _can_download(_type, file_formats, file_format):
+                    if "." not in file_name:
+                        (path, basename) = os.path.split(file_name)
+                        file_name = '{}/##{}##{}.{}'.format(path, message.id,basename, file_format)
+                    else:
+                        (path, basename) = os.path.split(file_name)
+                        basename, ext = os.path.splitext(basename)
+                        file_name = '{}/##{}##{}{}'.format(path, message.id,basename, ext)
                     if _is_exist(file_name):
                         file_name = get_next_name(file_name)
-                        #print("sleep3_2")
-                        #await asyncio.sleep(3)
-                        #print("sleep3_2 end")
                         download_path = await client.download_media(
                             message, file_name=file_name
                         )
                         # pylint: disable = C0301
                         download_path = manage_duplicate_file(download_path)  # type: ignore
                     else:
-                        #print("sleep3_3")
-                        #await asyncio.sleep(3)
                         download_path = await client.download_media(
                             message, file_name=file_name
                         )
@@ -350,7 +352,6 @@ async def begin_import(config: dict, pagination_limit: int) -> dict:
             messages_list.append(message)
     if config["ids_to_skip"]:
     	IDS_TO_SKIP.update(config["ids_to_skip"])
-    	#print(IDS_TO_SKIP)
     #async for message in messages_iter:  # type: ignore
     async for message in messages_iter: 
         if pagination_count != pagination_limit:
