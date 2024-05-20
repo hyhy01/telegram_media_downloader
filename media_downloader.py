@@ -196,8 +196,7 @@ async def download_media(
                         file_name = '{}/##{}##{}.{}'.format(path, message.id,basename, file_format)
                     else:
                         (path, basename) = os.path.split(file_name)
-                        basename, ext = os.path.splitext(basename)
-                        file_name = '{}/##{}##{}{}'.format(path, message.id,basename, ext)
+                        file_name = '{}/##{}##{}'.format(path, message.id,basename)
                     if _is_exist(file_name):
                         file_name = get_next_name(file_name)
                         download_path = await client.download_media(
@@ -209,8 +208,28 @@ async def download_media(
                         download_path = await client.download_media(
                             message, file_name=file_name
                         )
-                    print("id:",message.id, download_path)
-                    if os.path.getsize(download_path) > 0:
+                    file_size_total = 0
+                    if message.video and _type=="video":
+                    	file_size_total = message.video.file_size
+                    if message.voice and _type=="voice":
+                    	file_size_total = message.voice.file_size
+                    if message.video_note and _type=="video_note":
+                    	file_size_total = message.video_note.file_size
+                    if message.photo and _type=="photo":
+                    	file_size_total = message.photo.file_size
+                    if message.sticker and _type=="sticker":
+                    	file_size_total = message.sticker.file_size
+                    if message.audio and _type=="audio":
+                    	file_size_total = message.audio.file_size
+                    if message.document and _type=="document":
+                    	file_size_total = message.document.file_size
+                    if message.animation and _type=="animation":
+                    	file_size_total = message.animation.file_size
+                    downloaded_size = os.path.getsize(download_path)
+                    print("id:",message.id, download_path,downloaded_size , file_size_total)
+                    if file_size_total != 0 and downloaded_size < file_size_total:
+                    	raise Exception("downloaded partly!", download_path,message.id)
+                    if downloaded_size > 0:
                         DOWNLOADED_IDS.append(message.id)
                         IDS_TO_SKIP.add(message.id)
                         if download_path:
@@ -354,7 +373,7 @@ async def begin_import(config: dict, pagination_limit: int) -> dict:
     	IDS_TO_SKIP.update(config["ids_to_skip"])
     #async for message in messages_iter:  # type: ignore
     async for message in messages_iter: 
-        if pagination_count != pagination_limit:
+        if pagination_count < pagination_limit:
             pagination_count += 1
             messages_list.append(message)
         else:
